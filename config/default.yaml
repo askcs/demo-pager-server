@@ -1,0 +1,4 @@
+Server:
+  port: 7550
+  delayInactivity: 100
+  httpport: 3000
