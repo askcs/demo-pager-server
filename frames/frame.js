@@ -86,7 +86,7 @@ Frame.prototype.decodeTypeSpecific = function() {
             return this.decodeG();
 
         case "R":
-            break;
+            return this.decodeR();
 
         case "S":
             break;
@@ -117,4 +117,43 @@ Frame.prototype.decodeG = function() {
     }
 }
 
+Frame.prototype.decodeR = function() {
+
+    if(isNaN(this.frame.substr(this.startParameter, LENGTH_PARAMETER)))
+        return false;
+    this.parameter = parseInt(this.frame.substr(this.startParameter, LENGTH_PARAMETER));
+
+    var startRest = this.startGPSPosition + LENGTH_GPS_LENGTH + LENGTH_PARAMETER;
+    this.rest = this.frame.substr(startRest, this.frame.length - startRest);
+    if(this.rest.length!=0) {
+        if(isNaN(this.rest))
+            return false;
+        this.numberSMSMessages = parseInt(this.rest);
+    }
+}
+
+Frame.prototype.decodeS = function() {
+
+    var SRV_FRAME_VERSION = 0,
+        SRV_AVAILABLE_MESSAGE = 1,
+        SRV_SOS = 2,
+        SRV_POS_FOLLOWUP = 3,
+        SRV_REQ_SINGLE_CENTER = 4,
+        SRV_SIMCARD_NUMBER = 7,
+        SRV_REQ_MULTI_CENTER = 8,
+        SRV_GEOFENCING = 9,
+        SRV_LOSS_POGSAG = 16,
+        SRV_NEG_POSITION = 99;
+
+
+    if(isNaN(this.frame.substr(this.startParameter, LENGTH_PARAMETER)))
+        return false;
+    this.parameter = parseInt(this.frame.substr(this.startParameter, LENGTH_PARAMETER));
+
+    switch(this.paramter ) {
+        case SRV_SIMCARD_NUMBER:
+
+            break;
+    }
+}
 module.exports = Frame;

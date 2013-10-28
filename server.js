@@ -47,7 +47,7 @@ console.log("Listening on port: ", port);
 
 function receiveData(data, socket) {
     var date = new Date();
-    console.log(date.toISOString()+" Receive: ",data);
+    console.log(date.toISOString()+" Receive: ",data.toString());
 
     // Loop over the data because it can contain multiple frames
     var continueDecodeData = true;
@@ -119,9 +119,6 @@ function receiveData(data, socket) {
             } else {
                 continueDecodeData = false;
             }
-
-            // TODO: do not assume it's only one frame
-            //continueDecodeData=false;
         }
     }
 }
@@ -191,7 +188,22 @@ function decodeData(data, sizeFrameLength, socket) {
 // R Frame
 function handleAcknowledgeAlert(frame) {
     console.log("going to handle acknowledge alert");
+    var ACK_AUTOMATIC = 0,
+        ACK_ACCEPT = 1,
+        ACK_REFUSE = 2,
+        ACK_ARRIVE_15_MINUTE = 3,
+        ACK_REPEAT = 97,
+        ACK_MANUAL = 98,
+        ACK_OTHER = 99;
 
+    var ff = new FrameFactory();
+
+    if(frame.parameter != ACK_REPEAT) {
+        var data = ff.createAcknowledge(frame.followNumber, frame.permannentConnection);
+        ch.sendMessage(frame.pagerId, data, 0);
+    }
+
+    // TODO: implement other types of acknowledgements
 }
 
 function handleAcknowledgePOCSAC(frame) {
