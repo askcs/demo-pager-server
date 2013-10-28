@@ -1,3 +1,4 @@
+var log = require("../lib/logger.js");
 var LENGTH_FRAME_TYPE = 1,
     LENGTH_FOLLOW_NUMBER = 2,
     LENGTH_PAGER_ID = 7,
@@ -89,7 +90,7 @@ Frame.prototype.decodeTypeSpecific = function() {
             return this.decodeR();
 
         case "S":
-            break;
+            return this.decodeS();
 
         case "P":
             break;
@@ -109,6 +110,8 @@ Frame.prototype.decodeG = function() {
     if(isNaN(this.frame.substr(this.startParameter, LENGTH_PARAMETER)))
         return false;
     this.parameter = parseInt(this.frame.substr(this.startParameter, LENGTH_PARAMETER));
+
+    log(this.pagerId, "BIRDY started in single center", this.frame, true);
 
     if(this.parameter == START_MULTI) {
         // TODO: Implement
@@ -130,6 +133,8 @@ Frame.prototype.decodeR = function() {
             return false;
         this.numberSMSMessages = parseInt(this.rest);
     }
+
+
 }
 
 Frame.prototype.decodeS = function() {
@@ -150,10 +155,22 @@ Frame.prototype.decodeS = function() {
         return false;
     this.parameter = parseInt(this.frame.substr(this.startParameter, LENGTH_PARAMETER));
 
-    switch(this.paramter ) {
+    switch(this.parameter ) {
         case SRV_SIMCARD_NUMBER:
+            var startRest = this.startParameter + LENGTH_PARAMETER;
+            this.rest = this.frame.substr(startRest, this.frame.length - startRest);
 
+            if(isNaN(this.rest.substr(0, 2)))
+                return false;
+            var simLength = parseInt(this.rest.substr(0, 2));
+            this.simcardNumber = this.rest.substr(2, simLength);
+
+            log(this.pagerId, "Received simcard number: "+this.simcardNumber, this.frame, true);
             break;
+    }
+
+    function parseSimCard() {
+
     }
 }
 module.exports = Frame;

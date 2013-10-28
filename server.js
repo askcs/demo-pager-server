@@ -2,7 +2,8 @@ var net = require('net'),
     config = require('config').Server,
     ClientHandler = require('./lib/clienthandler.js'),
     Frame = require('./frames/frame.js'),
-    FrameFactory = require('./lib/framefactory.js');
+    FrameFactory = require('./lib/framefactory.js'),
+    log = require("./lib/logger.js");
 
 var ch = new ClientHandler(config.delayInactivity);
 var port = config.port;
@@ -47,7 +48,7 @@ console.log("Listening on port: ", port);
 
 function receiveData(data, socket) {
     var date = new Date();
-    console.log(date.toISOString()+" Receive: ",data.toString());
+    //console.log(date.toISOString()+" Receive: ",data.toString());
 
     // Loop over the data because it can contain multiple frames
     var continueDecodeData = true;
@@ -187,7 +188,7 @@ function decodeData(data, sizeFrameLength, socket) {
 
 // R Frame
 function handleAcknowledgeAlert(frame) {
-    console.log("going to handle acknowledge alert");
+    //console.log("going to handle acknowledge alert");
     var ACK_AUTOMATIC = 0,
         ACK_ACCEPT = 1,
         ACK_REFUSE = 2,
@@ -198,12 +199,19 @@ function handleAcknowledgeAlert(frame) {
 
     var ff = new FrameFactory();
 
+    log(frame.pagerId, "Acknowledgement (automatic)", frame.frame, true);
+
     if(frame.parameter != ACK_REPEAT) {
         var data = ff.createAcknowledge(frame.followNumber, frame.permannentConnection);
         ch.sendMessage(frame.pagerId, data, 0);
+
+        log(frame.pagerId, "Link acknowledgement", data, false);
     }
 
+
+
     // TODO: implement other types of acknowledgements
+    // TODO: send gps location to backend
 }
 
 function handleAcknowledgePOCSAC(frame) {
@@ -227,8 +235,31 @@ function handleAvailabilityMultiCenter(frame) {
 }
 
 function handleService(frame) {
-    // TODO: implement
-    console.log("going to handle service");
+    var SRV_FRAME_VERSION = 0,
+        SRV_AVAILABLE_MESSAGE = 1,
+        SRV_SOS = 2,
+        SRV_POS_FOLLOWUP = 3,
+        SRV_REQ_SINGLE_CENTER = 4,
+        SRV_SIMCARD_NUMBER = 7,
+        SRV_REQ_MULTI_CENTER = 8,
+        SRV_GEOFENCING = 9,
+        SRV_LOSS_POGSAG = 16,
+        SRV_NEG_POSITION = 99;
+
+    var ff = new FrameFactory();
+
+    switch(frame.parameter) {
+
+        case SRV_SIMCARD_NUMBER:
+            var data = ff.createAcknowledge(frame.followNumber, frame.permannentConnection);
+            ch.sendMessage(frame.pagerId, data, 0);
+            break;
+
+        default:
+            var data = ff.createAcknowledge(frame.followNumber, frame.permannentConnection);
+            ch.sendMessage(frame.pagerId, data, 0);
+            break;
+    }
 }
 
 function handleAcknowledgeData(frame) {
@@ -238,7 +269,7 @@ function handleAcknowledgeData(frame) {
 
 // G Frame
 function handleStartUp(frame, socket) {
-    console.log("going to handle startup");
+    //console.log("going to handle startup");
     var ff = new FrameFactory();
 
     var STOP = 0,
@@ -262,6 +293,8 @@ function handleStartUp(frame, socket) {
             // Send S message
             var data = ff.createServiceMessageStatusReq(frame.followNumber, frame.pagerId, frame.permannentConnection);
             ch.sendMessage(frame.pagerId, data, 5000);
+
+            log(frame.pagerId, "Response information that there is no control room or that the requested function is not implemented the control room", data, false);
             break;
 
         case RECONNECT:
@@ -277,6 +310,8 @@ function handleStartUp(frame, socket) {
         var frameNumber = ch.incrementFrameNumber(frame.pagerId);
         var data = ff.createAlarmMessageSendTime(frameNumber, frame.pagerId, frame.permannentConnection);
         ch.sendMessage(frame.pagerId, data, 5000);
+
+        log(frame.pagerId, "Setting the time at "+(new Date()).toISOString(), data, false);
     }
 
     if(requestSim) {
@@ -284,5 +319,7 @@ function handleStartUp(frame, socket) {
         var frameNumber = ch.incrementFrameNumber(frame.pagerId);
         var data = ff.createAlarmMessageTextMessage(frameNumber, frame.pagerId, 2, "***S***000", frame.permannentConnection);
         ch.sendMessage(frame.pagerId, data, 5000);
+
+        log(frame.pagerId, "Asking for SIM number", data, false);
     }
 }
