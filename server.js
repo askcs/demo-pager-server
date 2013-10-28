@@ -1,5 +1,7 @@
 var net = require('net'),
     config = require('config').Server,
+    express = require('express'),
+    http = require('http'),
     ClientHandler = require('./lib/clienthandler.js'),
     Frame = require('./frames/frame.js'),
     FrameFactory = require('./lib/framefactory.js'),
@@ -7,6 +9,7 @@ var net = require('net'),
 
 var ch = new ClientHandler(config.delayInactivity);
 var port = config.port;
+var httpPort = config.httpport;
 
 var STX = 2,
     POLL = 5,
@@ -42,9 +45,34 @@ var server = net.createServer(function(socket){
         ch.removeBySocket(socket);
     });
 });
-
 server.listen(port);
 console.log("Listening on port: ", port);
+
+var app = express();
+app.get('/alarm/:id', function(req, res){
+    var message = req.query.message;
+    var clientId = req.params.id;
+
+    if(clientId=="all") {
+        if(Object.keys(ch.clients).length==0) {
+            return res.send("Send alarm message: "+message+" to no one");
+        }
+        for(varv i in ch.clients) {
+            var client = ch.clients[i];
+            res.send("Send alarm message: "+message+" to: "+client.id);
+        }
+    } else {
+        var client = ch.clients[clientId];
+
+        if(client==null) {
+            res.send("Client: "+clientId+" is not connected");
+        } else {
+            res.send("Client: "+clientId+" is connected");
+        }
+    }
+});
+app.listen(httpPort);
+console.log("HTTP Listening on: "+httpPort);
 
 function receiveData(data, socket) {
     var date = new Date();
@@ -284,6 +312,13 @@ function handleStartUp(frame, socket) {
     switch(frame.parameter) {
         case STOP:
             // Send A Message
+            var data = ff.createAcknowledge(frame.followNumber, frame.permannentConnection);
+            ch.sendMessage(frame.pagerId, data, 0);
+
+            log(frame.pagerId, "Ack of Birdy Stop notification", data, false);
+
+            ch.disconnect(ch, frame.pagerId);
+
             break;
 
         case START_SINGLE:
