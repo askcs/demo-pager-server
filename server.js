@@ -6,7 +6,8 @@ var net = require('net'),
     Frame = require('./frames/frame.js'),
     FrameFactory = require('./lib/framefactory.js'),
     log = require("./lib/logger.js"),
-    AskSoapClient = require('./lib/asksoapclient.js');
+    AskSoapClient = require('./lib/asksoapclient.js'),
+    Q = require('q');
 
 var ch = new ClientHandler(config.delayInactivity);
 var port = config.port;
@@ -87,7 +88,7 @@ console.log("HTTP Listening on: "+httpPort);
 function sendAlarm(id, message) {
     var frameNumber = ch.incrementFrameNumber(id);
     var data =  ff.createAlarmMessageTextMessage(frameNumber, id, 0, message, true);
-    ch.sendMessage(client.id, data, 0);
+    ch.sendMessage(id, data, 0);
 }
 
 function receiveData(data, socket) {
@@ -310,17 +311,18 @@ function handleAvailability(frame) {
         case 8:
             state = STATE_UNAVAIL;
             length = 12;
-            break;
+        break;
         case 9:
-            state = STATE_UNAVAIL;
-            length = 24;
-            break;
+        state = STATE_UNAVAIL;
+        length = 24;
+        break;
     }
 
     if(length!=0) {
         var client = ch.clients[frame.pagerId];
-        setAvailability(client.uuid, state, length, function(err, result){
 
+        var promise = setAvailability(client.uuid, state, length);
+        promise.then(function(result){
             var ff = new FrameFactory();
             var notification = 0; // TODO: Check for invalid responses
             var message = ff.createAvailability(frame.frameNumber, notification, frame.parameter, frame.permannentConnection);
@@ -391,7 +393,7 @@ function handleStartUp(frame, socket) {
 
             ch.disconnect(ch, frame.pagerId);
 
-            break;
+            return;
 
         case START_SINGLE:
         case START_MULTI:
@@ -431,21 +433,25 @@ function handleStartUp(frame, socket) {
     }
 }
 
-function setAvailability (nodeUUID, state, length, callback) {
+function setAvailability (nodeUUID, state, length) {
 
-        var label = state;
-        var start = Math.round(new Date().getTime() / 1000);
-        var end = start + (60 * 60 * length); // 1 Hour
-        var method = 'TRIM_EXISTING';
-        var text = null;
+    var label = state;
+    var start = Math.round(new Date().getTime() / 1000);
+    var end = start + (60 * 60 * length); // 1 Hour
+    var method = 'TRIM_EXISTING';
+    var text = null;
 
-        var client = new AskSoapClient(wsdl, authKey);
-        client.createSlot(nodeUUID, start, end, label, method, text, function(err, result) {
-            if(err) {
-                console.log('CreateSlot ERROR: '+err);
-                return callback(err);
-            }
-            console.log("createSlot: "+result);
-            callback(null, result);
-        });
+    var deferred = Q.defer();
+
+    var client = new AskSoapClient(wsdl, authKey);
+    client.createSlot(nodeUUID, start, end, label, method, text, function(err, result) {
+        if(err) {
+            console.log('CreateSlot ERROR: '+err);
+            return deferred.reject(err);
+        }
+        console.log("createSlot: "+result);
+        deferred.resolve(result);
+    });
+
+    return deferred.promise;
 }
