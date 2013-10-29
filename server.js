@@ -325,8 +325,9 @@ function handleAvailability(frame) {
         promise.then(function(result){
             var ff = new FrameFactory();
             var notification = 0; // TODO: Check for invalid responses
-            var message = ff.createAvailability(frame.frameNumber, notification, frame.parameter, frame.permannentConnection);
-            ch.sendMessage(frame.pagerId, message, 0);
+            var data = ff.createAvailability(frame.frameNumber, notification, frame.parameter, frame.permannentConnection);
+            ch.sendMessage(frame.pagerId, data, 0);
+            log(frame.pagerId, "Answer simulated (available)", data, false);
         });
     }
 }
