@@ -322,7 +322,7 @@ function handleAvailability(frame) {
         var client = ch.clients[frame.pagerId];
 
         var promise1 = setAvailability(client.uuid, state, length);
-        var promise2 = sendAvailability(frame.frameNumber, frame.pagerId, 0, frame.parameter);
+        var promise2 = sendAvailability(frame.followNumber, frame.pagerId, 0, frame.parameter);
         promise1.then(function(result){
             promise2.then(function(){
                 console.log("done?");
