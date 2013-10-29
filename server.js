@@ -321,13 +321,12 @@ function handleAvailability(frame) {
     if(length!=0) {
         var client = ch.clients[frame.pagerId];
 
-        var promise = setAvailability(client.uuid, state, length);
-        promise.then(function(result){
-            var ff = new FrameFactory();
-            var notification = 0; // TODO: Check for invalid responses
-            var data = ff.createAvailability(frame.frameNumber, notification, frame.parameter, frame.permannentConnection);
-            ch.sendMessage(frame.pagerId, data, 0);
-            log(frame.pagerId, "Answer simulated (available)", data, false);
+        var promise1 = setAvailability(client.uuid, state, length);
+        var promise2 = sendAvailability(frame.frameNumber, frame.pagerId, 0, frame.parameter);
+        promise1.then(function(result){
+            promise2.then(function(){
+                console.log("done?");
+            });
         });
     }
 }
@@ -453,6 +452,22 @@ function setAvailability (nodeUUID, state, length) {
         console.log("createSlot: "+result);
         deferred.resolve(result);
     });
+
+    return deferred.promise;
+}
+
+function sendAvailability(frameNumber, pagerId, notification, state) {
+
+    var deferred = Q.defer();
+
+    setTimeout(function(frameNumber, pagerId, notification, state){
+        var ff = new FrameFactory();
+        var notification = 0; // TODO: Check for invalid responses
+        var data = ff.createAvailability(frameNumber, notification, state, true);
+        ch.sendMessage(pagerId, data, 0);
+        log(pagerId, "Answer simulated (available)", data, false);
+        deferred.resolve();
+    },0);
 
     return deferred.promise;
 }
