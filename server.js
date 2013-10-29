@@ -467,7 +467,7 @@ function sendAvailability(frameNumber, pagerId, notification, state) {
         ch.sendMessage(pagerId, data, 0);
         log(pagerId, "Answer simulated (available)", data, false);
         deferred.resolve();
-    },0);
+    },0,frameNumber, pagerId, notification, state);
 
     return deferred.promise;
 }
