@@ -23,6 +23,7 @@
   "dependencies": {
     "config": "~0.4.30",
     "js-yaml": "~2.1.0",
-    "express": "~3.4.3"
+    "express": "~3.4.3",
+    "q": "~0.9.7"
   }
 }

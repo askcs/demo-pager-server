@@ -5,11 +5,14 @@ var net = require('net'),
     ClientHandler = require('./lib/clienthandler.js'),
     Frame = require('./frames/frame.js'),
     FrameFactory = require('./lib/framefactory.js'),
-    log = require("./lib/logger.js");
+    log = require("./lib/logger.js"),
+    AskSoapClient = require('./lib/asksoapclient.js');
 
 var ch = new ClientHandler(config.delayInactivity);
 var port = config.port;
 var httpPort = config.httpport;
+var wsdl = config.wsdl,
+    authKey = config.authKey;
 
 var STX = 2,
     POLL = 5,
@@ -57,22 +60,35 @@ app.get('/alarm/:id', function(req, res){
         if(Object.keys(ch.clients).length==0) {
             return res.send("Send alarm message: "+message+" to no one");
         }
-        for(varv i in ch.clients) {
+        var ff = new FrameFactory();
+        var message = "";
+        for(var i in ch.clients) {
             var client = ch.clients[i];
-            res.send("Send alarm message: "+message+" to: "+client.id);
+
+            sendAlarm(client.id, "Test Alarm PRIO1");
+            message += "Send alarm message: "+message+" to: "+client.id+"<br/>";
         }
+        res.send(message);
     } else {
         var client = ch.clients[clientId];
 
         if(client==null) {
             res.send("Client: "+clientId+" is not connected");
         } else {
+            sendAlarm(client.id, "Test Alarm PRIO1");
             res.send("Client: "+clientId+" is connected");
         }
     }
+
 });
 app.listen(httpPort);
 console.log("HTTP Listening on: "+httpPort);
+
+function sendAlarm(id, message) {
+    var frameNumber = ch.incrementFrameNumber(id);
+    var data =  ff.createAlarmMessageTextMessage(frameNumber, id, 0, message, true);
+    ch.sendMessage(client.id, data, 0);
+}
 
 function receiveData(data, socket) {
     var date = new Date();
@@ -236,8 +252,6 @@ function handleAcknowledgeAlert(frame) {
         log(frame.pagerId, "Link acknowledgement", data, false);
     }
 
-
-
     // TODO: implement other types of acknowledgements
     // TODO: send gps location to backend
 }
@@ -253,8 +267,66 @@ function handleAcknowledgeSMS(frame) {
 }
 
 function handleAvailability(frame) {
-    // TODO: implement
-    console.log("going to handle availability");
+
+    var STATE_AVAIL = 'com.ask-cs.State.Available',
+        STATE_UNAVAIL = 'com.ask-cs.State.Unavailable';
+
+    var state = "";
+    var length = 0;
+    switch(frame.parameter) {
+
+        case 0:
+            state = STATE_AVAIL;
+            length = 1;
+            break;
+        case 1:
+            state = STATE_AVAIL;
+            length = 2;
+            break;
+        case 2:
+            state = STATE_AVAIL;
+            length = 4;
+            break;
+        case 3:
+            state = STATE_AVAIL;
+            length = 12;
+            break;
+        case 4:
+            state = STATE_AVAIL;
+            length = 24;
+            break;
+        case 5:
+            state = STATE_UNAVAIL;
+            length = 1;
+            break;
+        case 6:
+            state = STATE_UNAVAIL;
+            length = 2;
+            break;
+        case 7:
+            state = STATE_UNAVAIL;
+            length = 4;
+            break;
+        case 8:
+            state = STATE_UNAVAIL;
+            length = 12;
+            break;
+        case 9:
+            state = STATE_UNAVAIL;
+            length = 24;
+            break;
+    }
+
+    if(length!=0) {
+        var client = ch.clients[frame.pagerId];
+        setAvailability(client.uuid, state, length, function(err, result){
+
+            var ff = new FrameFactory();
+            var notification = 0; // TODO: Check for invalid responses
+            var message = ff.createAvailability(frame.frameNumber, notification, frame.parameter, frame.permannentConnection);
+            ch.sendMessage(frame.pagerId, message, 0);
+        });
+    }
 }
 
 function handleAvailabilityMultiCenter(frame) {
@@ -357,4 +429,23 @@ function handleStartUp(frame, socket) {
 
         log(frame.pagerId, "Asking for SIM number", data, false);
     }
+}
+
+function setAvailability (nodeUUID, state, length, callback) {
+
+        var label = state;
+        var start = Math.round(new Date().getTime() / 1000);
+        var end = start + (60 * 60 * length); // 1 Hour
+        var method = 'TRIM_EXISTING';
+        var text = null;
+
+        var client = new AskSoapClient(wsdl, authKey);
+        client.createSlot(nodeUUID, start, end, label, method, text, function(err, result) {
+            if(err) {
+                console.log('CreateSlot ERROR: '+err);
+                return callback(err);
+            }
+            console.log("createSlot: "+result);
+            callback(null, result);
+        });
 }

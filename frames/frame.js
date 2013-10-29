@@ -92,6 +92,9 @@ Frame.prototype.decodeTypeSpecific = function() {
         case "S":
             return this.decodeS();
 
+        case "E":
+            return this.decodeE();
+
         case "P":
             break;
     }
@@ -168,9 +171,11 @@ Frame.prototype.decodeS = function() {
             log(this.pagerId, "Received simcard number: "+this.simcardNumber, this.frame, true);
             break;
     }
+}
 
-    function parseSimCard() {
-
-    }
+Frame.prototype.decodeE = function() {
+    if(isNaN(this.frame.substr(this.startParameter, LENGTH_PARAMETER)))
+        return false;
+    this.parameter = parseInt(this.frame.substr(this.startParameter, LENGTH_PARAMETER));
 }
 module.exports = Frame;
