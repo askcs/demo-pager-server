@@ -522,6 +522,10 @@ function setAvailability (nodeUUID, state, length) {
     return deferred.promise;
 }
 
+function getAvailability() {
+
+}
+
 function sendAvailability(frameNumber, pagerId, notification, state) {
 
     var deferred = Q.defer();

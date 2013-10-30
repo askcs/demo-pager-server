@@ -5,3 +5,5 @@ Server:
   authKey: 7761817a-2d23-1030-802b-005056bc7e66
   wsdl: http://knrmtest.myask.me/webservices/index.php?wsdl
   requestSim: false
+  melderkamerid: 1
+  escalationgroupid: 1
