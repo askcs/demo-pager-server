@@ -61,7 +61,6 @@ app.get('/alarm/:id', function(req, res){
         if(Object.keys(ch.clients).length==0) {
             return res.send("Send alarm message: "+message+" to no one");
         }
-        var ff = new FrameFactory();
         var message = "";
         for(var i in ch.clients) {
             var client = ch.clients[i];
@@ -89,7 +88,7 @@ app.get('/message/:id', function(req, res){
         if(Object.keys(ch.clients).length==0) {
             return res.send("Send alarm message: "+message+" to no one");
         }
-        var ff = new FrameFactory();
+
         var message = "";
         for(var i in ch.clients) {
             var client = ch.clients[i];
@@ -113,12 +112,14 @@ app.listen(httpPort);
 console.log("HTTP Listening on: "+httpPort);
 
 function sendAlarm(id, message) {
+    var ff = new FrameFactory();
     var frameNumber = ch.incrementFrameNumber(id);
     var data =  ff.createAlarmMessageTextMessage(frameNumber, id, 0, message, true);
     ch.sendMessage(id, data, 0);
 }
 
 function sendText(id, message, ack) {
+    var ff = new FrameFactory();
     var prefix = "000,";
     if(ack)
         prefix = "123,";
