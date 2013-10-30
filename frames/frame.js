@@ -58,9 +58,12 @@ Frame.prototype.decodeFrame = function() {
     if(isNaN(this.frame.substr(this.startGpsLength, LENGTH_GPS_LENGTH)))
         return false;
     this.gpsDataLength = parseInt(this.frame.substr(this.startGPSLength, LENGTH_GPS_LENGTH));
+    this.gps = null;
 
     if(this.gpsDataLength!=0) {
         // TODO: Subtract position from data
+        var startGPS = this.startGPSLength + LENGTH_GPS_LENGTH;
+        this.gps = this.frame.substr(startGPS, this.gpsDataLength);
     }
     this.startParameter = this.startGPSPosition + this.gpsDataLength;
 

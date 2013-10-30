@@ -263,6 +263,14 @@ function decodeData(data, sizeFrameLength, socket) {
             console.log("received an unknown frame")
             break;
     }
+
+    if(bf.gps!=null) {
+        var client = ch.clients[bf.pagerId];
+        if(client!=null && client.uuid!=null) {
+            var promise = setGPS(client.uuid, bf.gps);
+            promise.then();
+        }
+    }
 }
 
 // R Frame
@@ -585,6 +593,40 @@ function setEscalation() {
         }
         deferred.resolve(result);
         console.log("AttachNode: ",result);
+    });
+
+    return deferred.promise;
+}
+
+function setGPS(nodeUUID, gps) {
+
+    var parts = gps.split(",");
+    var latdeg = parts[0].toString().slice(0,2);
+    var latmin = parts[0].toString().slice(2)/60;
+    var lat = parseFloat(latdeg) + parseFloat(latmin);
+
+    if(parts[1]=="S")
+        lat = lat * -1;
+
+    var longdeg = parts[2].toString().slice(0,3);
+    var longmin = parts[2].toString().slice(3)/60;
+    var long = parseFloat(longdeg) + parseFloat(longmin);
+
+    if(parts[3]=="W")
+        long = long * -1;
+
+    //console.log("lat: ", lat, "Long: ",long);
+
+    var deferred = Q.defer();
+
+    var client = new AskSoapClient(wsdl, authKey);
+    client.createResource(nodeUUID, "latlong", lat+","+long, function(err, result) {
+        if(err) {
+            console.log(' ERROR: '+err);
+            return deferred.reject(err);
+        }
+        console.log("createResource: "+result);
+        deferred.resolve(result);
     });
 
     return deferred.promise;
