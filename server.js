@@ -61,7 +61,6 @@ app.get('/alarm/:id', function(req, res){
         if(Object.keys(ch.clients).length==0) {
             return res.send("Send alarm message: "+message+" to no one");
         }
-        var message = "";
         for(var i in ch.clients) {
             var client = ch.clients[i];
 
@@ -88,8 +87,6 @@ app.get('/message/:id', function(req, res){
         if(Object.keys(ch.clients).length==0) {
             return res.send("Send alarm message: "+message+" to no one");
         }
-
-        var message = "";
         for(var i in ch.clients) {
             var client = ch.clients[i];
 
@@ -488,6 +485,12 @@ function handleStartUp(frame, socket) {
 
         case RECONNECT:
             // Send A Message
+            ch.addClientId(socket, frame.pagerId, frame.followNumber);
+            // Send S message
+            var data = ff.createServiceMessageStatusReq(frame.followNumber, frame.pagerId, frame.permannentConnection);
+            ch.sendMessage(frame.pagerId, data, 5000);
+
+            log(frame.pagerId, "Response information that there is no control room or that the requested function is not implemented the control room", data, false);
             break;
 
         default:
