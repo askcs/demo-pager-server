@@ -419,8 +419,24 @@ function handleService(frame) {
             break;
 
         case SRV_REQ_SINGLE_CENTER:
+            var client = ch.clients[frame.pagerId];
+            var promise = getAvailability(client.uuid);
+            promise.then(function(result) {
 
-            // Get current state
+                //var data = ff.createAvailability()
+                var slot = result.slotData;
+                var state = 99;
+                if(slot!=null) {
+                    if(slot.label=='com.ask-cs.State.Unavailable') {
+                        state = 41;
+                    } else {
+                        state = 40;
+                    }
+                }
+
+                var data = ff.createAvailability(frame.followNumber, 0, state, true);
+                ch.sendMessage(frame.pagerId, data, 0);
+            });
             break;
 
         default:
@@ -522,8 +538,21 @@ function setAvailability (nodeUUID, state, length) {
     return deferred.promise;
 }
 
-function getAvailability() {
+function getAvailability(nodeUUID) {
+    var start = Math.round(new Date().getTime() / 1000);
+    var end = start + 1;
 
+    var deferred = Q.defer();
+
+    var client = new AskSoapClient(wsdl, authKey);
+    client.getSlots(nodeUUID, start, end, true, function(err, result) {
+        if(err) {
+            return deferred.reject(err);
+        }
+        deferred.resolve(result);
+    });
+
+    return deferred.promise;
 }
 
 function sendAvailability(frameNumber, pagerId, notification, state) {
