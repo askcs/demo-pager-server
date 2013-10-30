@@ -85,13 +85,13 @@ app.get('/message/:id', function(req, res){
 
     if(clientId=="all") {
         if(Object.keys(ch.clients).length==0) {
-            return res.send("Send alarm message: "+message+" to no one");
+            return res.send("Send normal message: "+message+" to no one");
         }
         for(var i in ch.clients) {
             var client = ch.clients[i];
 
             sendText(client.id, message);
-            message += "Send alarm message: "+message+" to: "+client.id+"<br/>";
+            message += "Send normal message: "+message+" to: "+client.id+"<br/>";
         }
         res.send(message);
     } else {
@@ -105,6 +105,14 @@ app.get('/message/:id', function(req, res){
         }
     }
 });
+app.get("/clients", function(req, res) {
+    var clientIDs = [];
+    for(var x in ch.clients) {
+        clientIDs.push(ch.clients[x].id);
+    }
+    res.send(clientIDs);
+});
+app.use("/", express.static(__dirname + '/public'));
 app.listen(httpPort);
 console.log("HTTP Listening on: "+httpPort);
 
