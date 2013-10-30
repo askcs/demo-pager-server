@@ -299,6 +299,7 @@ function handleAcknowledgeAlert(frame) {
 
         case ACK_REFUSE:
             // TODO: Notify Emergency Room!
+            setEscalation();
             break;
     }
 }
@@ -412,10 +413,6 @@ function handleService(frame) {
         case SRV_SIMCARD_NUMBER:
             var data = ff.createAcknowledge(frame.followNumber, frame.permannentConnection);
             ch.sendMessage(frame.pagerId, data, 0);
-            break;
-
-        case SRV_AVAILABLE_MESSAGE:
-
             break;
 
         case SRV_REQ_SINGLE_CENTER:
@@ -567,6 +564,24 @@ function sendAvailability(frameNumber, pagerId, notification, state) {
         log(pagerId, "Answer simulated (available)", data, false);
         deferred.resolve();
     },0,frameNumber, pagerId, notification, state);
+
+    return deferred.promise;
+}
+
+function setEscalation() {
+
+    var parNode = config.escalationgroupid,
+        memNode = config.melderkamerid,
+        deferred = Q.defer();
+
+    var client = new AskSoapClient(wsdl, authKey);
+    client.attachNode(parNode, memNode, function(err, result) {
+        if(err) {
+            return deferred.reject(err);
+        }
+        deferred.resolve(result);
+        console.log("AttachNode: ",result);
+    });
 
     return deferred.promise;
 }
