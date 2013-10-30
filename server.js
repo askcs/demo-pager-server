@@ -65,7 +65,7 @@ app.get('/alarm/:id', function(req, res){
             var client = ch.clients[i];
 
             sendAlarm(client.id, message);
-            message += "Send alarm message: "+message+" to: "+client.id+"<br/>";
+            message += "Send alarm message: "+message+" to: "+client.id;
         }
         res.send(message);
     } else {
@@ -91,7 +91,7 @@ app.get('/message/:id', function(req, res){
             var client = ch.clients[i];
 
             sendText(client.id, message);
-            message += "Send normal message: "+message+" to: "+client.id+"<br/>";
+            message += "Send normal message: "+message+" to: "+client.id;
         }
         res.send(message);
     } else {
