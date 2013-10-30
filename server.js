@@ -80,7 +80,34 @@ app.get('/alarm/:id', function(req, res){
             res.send("Client: "+clientId+" is connected");
         }
     }
+});
+app.get('/message/:id', function(req, res){
+    var message = req.query.message;
+    var clientId = req.params.id;
 
+    if(clientId=="all") {
+        if(Object.keys(ch.clients).length==0) {
+            return res.send("Send alarm message: "+message+" to no one");
+        }
+        var ff = new FrameFactory();
+        var message = "";
+        for(var i in ch.clients) {
+            var client = ch.clients[i];
+
+            sendText(client.id, message);
+            message += "Send alarm message: "+message+" to: "+client.id+"<br/>";
+        }
+        res.send(message);
+    } else {
+        var client = ch.clients[clientId];
+
+        if(client==null) {
+            res.send("Client: "+clientId+" is not connected");
+        } else {
+            sendText(client.id, message);
+            res.send("Client: "+clientId+" is connected");
+        }
+    }
 });
 app.listen(httpPort);
 console.log("HTTP Listening on: "+httpPort);
@@ -89,6 +116,15 @@ function sendAlarm(id, message) {
     var frameNumber = ch.incrementFrameNumber(id);
     var data =  ff.createAlarmMessageTextMessage(frameNumber, id, 0, message, true);
     ch.sendMessage(id, data, 0);
+}
+
+function sendText(id, message, ack) {
+    var prefix = "000,";
+    if(ack)
+        prefix = "123,";
+    var frameNumber = ch.incrementFrameNumber(id);
+    var data =  ff.createAlarmMessageTextMessage(frameNumber, id, 0, "***T***"+prefix+message, true);
+    ch.sendMessage(id, data, 6000);
 }
 
 function receiveData(data, socket) {
@@ -255,6 +291,16 @@ function handleAcknowledgeAlert(frame) {
 
     // TODO: implement other types of acknowledgements
     // TODO: send gps location to backend
+
+    switch(frame.parameter) {
+        case ACK_ACCEPT:
+            // Return something?
+            break;
+
+        case ACK_REFUSE:
+            // TODO: Notify Emergency Room!
+            break;
+    }
 }
 
 function handleAcknowledgePOCSAC(frame) {
@@ -266,7 +312,7 @@ function handleAcknowledgeSMS(frame) {
     // TODO: implement
     console.log("going to handle acknowledge sms");
 }
-
+// E Frame
 function handleAvailability(frame) {
 
     var STATE_AVAIL = 'com.ask-cs.State.Available',
@@ -274,58 +320,69 @@ function handleAvailability(frame) {
 
     var state = "";
     var length = 0;
+    var pager_state = 0;
     switch(frame.parameter) {
 
         case 0:
             state = STATE_AVAIL;
             length = 1;
+            pager_state = 40;
             break;
         case 1:
             state = STATE_AVAIL;
             length = 2;
+            pager_state = 40;
             break;
         case 2:
             state = STATE_AVAIL;
             length = 4;
+            pager_state = 40;
             break;
         case 3:
             state = STATE_AVAIL;
             length = 12;
+            pager_state = 40;
             break;
         case 4:
             state = STATE_AVAIL;
             length = 24;
+            pager_state = 40;
             break;
         case 5:
             state = STATE_UNAVAIL;
             length = 1;
+            pager_state = 41;
             break;
         case 6:
             state = STATE_UNAVAIL;
             length = 2;
+            pager_state = 41;
             break;
         case 7:
             state = STATE_UNAVAIL;
             length = 4;
+            pager_state = 41;
             break;
         case 8:
             state = STATE_UNAVAIL;
             length = 12;
+            pager_state = 41;
         break;
         case 9:
-        state = STATE_UNAVAIL;
-        length = 24;
-        break;
+            state = STATE_UNAVAIL;
+            length = 24;
+            pager_state = 41;
+            break;
     }
 
     if(length!=0) {
         var client = ch.clients[frame.pagerId];
 
         var promise1 = setAvailability(client.uuid, state, length);
-        var promise2 = sendAvailability(frame.followNumber, frame.pagerId, 0, frame.parameter);
+        var promise2 = sendAvailability(frame.followNumber, frame.pagerId, 0, pager_state);
         promise1.then(function(result){
             promise2.then(function(){
-                console.log("done?");
+                //console.log("done?");
             });
         });
     }
@@ -335,7 +392,7 @@ function handleAvailabilityMultiCenter(frame) {
     // TODO: implement
     console.log("going to handle availability multi center");
 }
-
+// S Frame
 function handleService(frame) {
     var SRV_FRAME_VERSION = 0,
         SRV_AVAILABLE_MESSAGE = 1,
@@ -355,6 +412,15 @@ function handleService(frame) {
         case SRV_SIMCARD_NUMBER:
             var data = ff.createAcknowledge(frame.followNumber, frame.permannentConnection);
             ch.sendMessage(frame.pagerId, data, 0);
+            break;
+
+        case SRV_AVAILABLE_MESSAGE:
+
+            break;
+
+        case SRV_REQ_SINGLE_CENTER:
+
+            // Get current state
             break;
 
         default:
@@ -381,7 +447,7 @@ function handleStartUp(frame, socket) {
         RECONNECT = 4;
 
     var sendDateTime = true;
-    var requestSim = true;
+    var requestSim = config.requestSim;
 
     switch(frame.parameter) {
         case STOP:
