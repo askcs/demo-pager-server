@@ -65,7 +65,7 @@ app.get('/alarm/:id', function(req, res){
         for(var i in ch.clients) {
             var client = ch.clients[i];
 
-            sendAlarm(client.id, "Test Alarm PRIO1");
+            sendAlarm(client.id, message);
             message += "Send alarm message: "+message+" to: "+client.id+"<br/>";
         }
         res.send(message);
@@ -75,7 +75,7 @@ app.get('/alarm/:id', function(req, res){
         if(client==null) {
             res.send("Client: "+clientId+" is not connected");
         } else {
-            sendAlarm(client.id, "Test Alarm PRIO1");
+            sendAlarm(client.id, message);
             res.send("Client: "+clientId+" is connected");
         }
     }
