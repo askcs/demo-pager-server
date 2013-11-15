@@ -9,7 +9,7 @@ var net = require('net'),
     AskSoapClient = require('./lib/asksoapclient.js'),
     Q = require('q');
 
-var ch = new ClientHandler(config.delayInactivity);
+var ch = new ClientHandler(config.delayInactivity, config);
 var port = config.port;
 var httpPort = config.httpport;
 var wsdl = config.wsdl,
@@ -40,13 +40,21 @@ var server = net.createServer(function(socket){
 
     socket.on('error', function (err) {
         console.log(date.toISOString()+" Client disconnected (error): "+socket.name);
-        ch.removeBySocket(socket);
+        var client = ch.sockets[socket.name];
+        var promise = setActiveSense(client.sense, 0);
+        promise.then(function() {
+            ch.removeBySocket(socket);
+        });
     });
 
     // Remove the client from the list when it leaves
     socket.on('end', function () {
         console.log(date.toISOString()+" Client disconnected: "+socket.name);
-        ch.removeBySocket(socket);
+        var client = ch.sockets[socket.name];
+        var promise = setActiveSense(client.sense, 0);
+        promise.then(function() {
+            ch.removeBySocket(socket);
+        });
     });
 });
 server.listen(port);
@@ -215,8 +223,11 @@ function decodeData(data, sizeFrameLength, socket) {
     // Check if the frame is normal polling frame
     if(data.length==1 && data[0] == POLL) {
         console.log("Polling frame");
-
         ch.updateClientConnBySocket(socket);
+
+        var client = ch.sockets[socket.name];
+        var promise = setActiveSense(client.sense, 2);
+        promise.then();
         return;
     }
 
@@ -225,6 +236,10 @@ function decodeData(data, sizeFrameLength, socket) {
         console.log("Polling battery frame");
 
         ch.updateClientConnBySocket(socket);
+
+        var client = ch.sockets[socket.name];
+        var promise = setActiveSense(client.sense, 1);
+        promise.then();
         return;
     }
 
@@ -276,7 +291,9 @@ function decodeData(data, sizeFrameLength, socket) {
         var client = ch.clients[bf.pagerId];
         if(client!=null && client.uuid!=null) {
             var promise = setGPS(client.uuid, bf.gps);
+            var promise2 = setGPSSense(client.sense, bf.gps);
             promise.then();
+            promise2.then();
         }
     }
 }
@@ -486,6 +503,9 @@ function handleStartUp(frame, socket) {
 
             ch.disconnect(ch, frame.pagerId);
 
+            var client = ch.clients[frame.pagerId];
+            var promise = setActiveSense(client.sense, 0);
+            promise.then();
             return;
 
         case START_SINGLE:
@@ -636,6 +656,58 @@ function setGPS(nodeUUID, gps) {
         console.log("createResource: "+result);
         deferred.resolve(result);
     });
+
+    return deferred.promise;
+}
+
+function setGPSSense(sense, gps) {
+
+    var parts = gps.split(",");
+    var latdeg = parts[0].toString().slice(0,2);
+    var latmin = parts[0].toString().slice(2)/60;
+    var lat = parseFloat(latdeg) + parseFloat(latmin);
+
+    if(parts[1]=="S")
+        lat = lat * -1;
+
+    var longdeg = parts[2].toString().slice(0,3);
+    var longmin = parts[2].toString().slice(3)/60;
+    var long = parseFloat(longdeg) + parseFloat(longmin);
+
+    if(parts[3]=="W")
+        long = long * -1;
+
+    var accuracy = parts[4];
+
+    console.log("lat: ", lat, " Long: ",long," Accuracy: ",accuracy);
+
+    var deferred = Q.defer();
+
+    sense.addGPSData(lat, long, accuracy, function(err, res){
+        if(err) {
+            console.log("Failed setting gps data: ",err);
+            deferred.reject(err);
+        } else {
+            console.log("Added gps data", res);
+            deferred.resolve();
+        }
+    })
+
+    return deferred.promise;
+}
+
+function setActiveSense(sense, value) {
+    var deferred = Q.defer();
+
+    sense.addActiveData(value, function(err, res){
+        if(err) {
+            console.log("Failed setting active data: ",err);
+            deferred.reject(err);
+        } else {
+            console.log("Added active data", res);
+            deferred.resolve();
+        }
+    })
 
     return deferred.promise;
 }

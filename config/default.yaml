@@ -7,3 +7,7 @@ Server:
   requestSim: false
   melderkamerid: meldkamer
   escalationgroupid: ddc07638-92b7-1031-908d-005056bc7e66
+  sense:
+    apptesttpl:
+      user: apptesttpl
+      pass: eadeb77d8fba90b42b32b7de13e8aaa6
