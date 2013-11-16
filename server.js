@@ -499,13 +499,13 @@ function handleStartUp(frame, socket) {
             var data = ff.createAcknowledge(frame.followNumber, frame.permannentConnection);
             ch.sendMessage(frame.pagerId, data, 0);
 
-            log(frame.pagerId, "Ack of Birdy Stop notification", data, false);
-
-            ch.disconnect(ch, frame.pagerId);
-
             var client = ch.sockets[socket.name];
             var promise = setActiveSense(client.sense, 0);
             promise.then();
+
+            log(frame.pagerId, "Ack of Birdy Stop notification", data, false);
+
+            ch.disconnect(ch, frame.pagerId);
             return;
 
         case START_SINGLE:
