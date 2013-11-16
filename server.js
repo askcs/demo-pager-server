@@ -503,7 +503,7 @@ function handleStartUp(frame, socket) {
 
             ch.disconnect(ch, frame.pagerId);
 
-            var client = ch.clients[frame.pagerId];
+            var client = ch.sockets[socket.name];
             var promise = setActiveSense(client.sense, 0);
             promise.then();
             return;
