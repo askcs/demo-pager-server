@@ -6,14 +6,39 @@ var net = require('net'),
     Frame = require('./frames/frame.js'),
     FrameFactory = require('./lib/framefactory.js'),
     log = require("./lib/logger.js"),
-    AskSoapClient = require('./lib/asksoapclient.js'),
+	AskSoapClient = require('./lib/asksoapclient.js'), // Keep this 'old ASK' soapclient for escalations only
+    AskRESTClient = require('./lib/askrestclient.js'),
     Q = require('q');
 
 var ch = new ClientHandler(config.delayInactivity, config);
+
+
 var port = config.port;
 var httpPort = config.httpport;
+
 var wsdl = config.wsdl,
     authKey = config.authKey;
+
+/* PagerId to user mapping */
+// Note: Also add a Sense account for each pagerId in clienthandler.js
+var users = {
+  "1": {
+    "username": "ducodemo",
+    "passHash": "95346415f1f5933a78386d1759d2ef22"
+  },
+  "2": {
+    "username": "jordibevel",
+    "passHash": "43514a20c7801ebd4b1e6769939dd95f"
+  },
+  "778224": {
+	"username": "ducodemo",
+    "passHash": "95346415f1f5933a78386d1759d2ef22"
+  }
+};
+
+var uuid = users['1']['username'];
+	var passHash = users['1']['passHash'];
+	var baseUrl = config.baseUrl;
 
 var STX = 2,
     POLL = 5,
@@ -296,6 +321,16 @@ function decodeData(data, sizeFrameLength, socket) {
             promise2.then();
         }
     }
+	
+	// Select specific user credentials based on the pagerid
+	if(typeof bf.pagerId != 'undefined' && bf.pagerId != null){
+		console.log("PagerID: " + bf.pagerId);
+		
+		// Read the login details for this pagerId
+		uuid = 		users[ bf.pagerId ]['username'];
+		passHash = 	users[ bf.pagerId ]['passHash'];
+		
+	}
 }
 
 // R Frame
@@ -350,6 +385,8 @@ function handleAvailability(frame) {
     var STATE_AVAIL = 'com.ask-cs.State.Available',
         STATE_UNAVAIL = 'com.ask-cs.State.Unavailable';
 
+	console.log('handleAvailability: frame.parameter = ' + frame.parameter);
+	
     var state = "";
     var length = 0;
     var pager_state = 0;
@@ -552,18 +589,20 @@ function handleStartUp(frame, socket) {
     }
 }
 
+// REST-IFIED
 function setAvailability (nodeUUID, state, length) {
 
+	console.log('setAvailability');
+	
     var label = state;
     var start = Math.round(new Date().getTime() / 1000);
     var end = start + (60 * 60 * length); // 1 Hour
-    var method = 'TRIM_EXISTING';
-    var text = null;
 
     var deferred = Q.defer();
 
-    var client = new AskSoapClient(wsdl, authKey);
-    client.createSlot(nodeUUID, start, end, label, method, text, function(err, result) {
+	console.log('Start process: Login user ' + uuid + ' with password hash ' + passHash + ' via URL: ' + baseUrl);
+    var client = new AskRESTClient(baseUrl, uuid, passHash);
+	client.createSlot(start, end, state, function(err, result) {
         if(err) {
             console.log('CreateSlot ERROR: '+err);
             return deferred.reject(err);
@@ -571,17 +610,18 @@ function setAvailability (nodeUUID, state, length) {
         console.log("createSlot: "+result);
         deferred.resolve(result);
     });
-
+	
     return deferred.promise;
 }
 
+// REST-IFIED
 function getAvailability(nodeUUID) {
     var start = Math.round(new Date().getTime() / 1000);
     var end = start + 1;
 
     var deferred = Q.defer();
 
-    var client = new AskSoapClient(wsdl, authKey);
+    var client = new AskRESTClient(baseUrl, uuid, passHash);
     client.getSlots(nodeUUID, start, end, true, function(err, result) {
         if(err) {
             return deferred.reject(err);
@@ -614,6 +654,8 @@ function setEscalation() {
         memNode = config.melderkamerid,
         deferred = Q.defer();
 
+	//*
+	// NOTE: Currently there is no 1-on-1 equivalent in the new REST API, so keep the old one.
     var client = new AskSoapClient(wsdl, authKey);
     client.attachNode(parNode, memNode, function(err, result) {
         if(err) {
@@ -622,6 +664,8 @@ function setEscalation() {
         deferred.resolve(result);
         console.log("AttachNode: ",result);
     });
+	//*/
+	deferred.resolve('true');
 
     return deferred.promise;
 }
@@ -647,7 +691,8 @@ function setGPS(nodeUUID, gps) {
 
     var deferred = Q.defer();
 
-    var client = new AskSoapClient(wsdl, authKey);
+	//*
+    var client = new AskRESTClient(baseUrl, uuid, passHash);
     client.createResource(nodeUUID, "latlong", lat+","+long, function(err, result) {
         if(err) {
             console.log(' ERROR: '+err);
@@ -656,6 +701,7 @@ function setGPS(nodeUUID, gps) {
         console.log("createResource: "+result);
         deferred.resolve(result);
     });
+	//*/
 
     return deferred.promise;
 }
