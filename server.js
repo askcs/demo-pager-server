@@ -24,21 +24,31 @@ var wsdl = config.wsdl,
 var users = {
   "1": {
     "username": "ducodemo",
-    "passHash": "95346415f1f5933a78386d1759d2ef22"
+    "passHash": "95346415f1f5933a78386d1759d2ef22",
+	"baseUrl": "http://askpack.ask-cs.com/standby-fair/"
   },
   "2": {
     "username": "jordibevel",
-    "passHash": "43514a20c7801ebd4b1e6769939dd95f"
+    "passHash": "43514a20c7801ebd4b1e6769939dd95f",
+	"baseUrl": "http://askpack.ask-cs.com/standby-fair/"
   },
+  /*
   "778224": {
 	"username": "ducodemo",
-    "passHash": "95346415f1f5933a78386d1759d2ef22"
+    "passHash": "95346415f1f5933a78386d1759d2ef22",
+	"baseUrl": "http://askpack.ask-cs.com/standby-fair/"
+  }
+  */
+  "778224": {
+	"username": "bhv-user",
+    "passHash": "cffbecbf42fe16225619a45151f2e0eb",
+	"baseUrl": "http://dev.ask-cs.com/bhv-demo/"
   }
 };
 
 var uuid = users['1']['username'];
 	var passHash = users['1']['passHash'];
-	var baseUrl = config.baseUrl;
+	var baseUrl = users['1']['baseUrl'];
 
 var STX = 2,
     POLL = 5,
