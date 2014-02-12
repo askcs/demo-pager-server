@@ -861,6 +861,6 @@ function sendToAgent(request, callback) {
         });
 
     // write data to request body
-    req.write(request);
+    req.write(JSON.stringify(request) + '\n');
     req.end();
 }
