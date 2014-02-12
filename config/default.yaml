@@ -3,6 +3,7 @@ Server:
   delayInactivity: 100
   httpport: 3000
   baseUrl: http://askpack.ask-cs.com/standby-fair/
+  alarmAgentUrl: http://dev.ask-cs.com/agents/bhv-demo_alarmManagerAgent/
   authKey: 7761817a-2d23-1030-802b-005056bc7e66
   wsdl: http://knrmtest.myask.me/webservices/index.php?wsdl
   requestSim: false

@@ -488,6 +488,15 @@ function handleService(frame) {
 
     switch(frame.parameter) {
 
+        case SRV_SOS:
+
+            sendAlarmToProxyAgent(frame.pagerId, frame.gps, frame.rest);
+
+
+            var data = ff.createAcknowledge(frame.followNumber, frame.permannentConnection);
+            ch.sendMessage(frame.pagerId, data, 0);
+            break;
+
         case SRV_SIMCARD_NUMBER:
             var data = ff.createAcknowledge(frame.followNumber, frame.permannentConnection);
             ch.sendMessage(frame.pagerId, data, 0);
@@ -550,6 +559,8 @@ function handleStartUp(frame, socket) {
             var promise = setActiveSense(client.sense, 0);
             promise.then();
 
+            sendActiveToProxyAgent(frame.pagerId, false);
+
             log(frame.pagerId, "Ack of Birdy Stop notification", data, false);
 
             ch.disconnect(ch, frame.pagerId);
@@ -563,6 +574,8 @@ function handleStartUp(frame, socket) {
             var data = ff.createServiceMessageStatusReq(frame.followNumber, frame.pagerId, frame.permannentConnection);
             ch.sendMessage(frame.pagerId, data, 5000);
 
+            sendActiveToProxyAgent(frame.pagerId, true);
+
             log(frame.pagerId, "Response information that there is no control room or that the requested function is not implemented the control room", data, false);
             break;
 
@@ -572,6 +585,8 @@ function handleStartUp(frame, socket) {
             // Send S message
             var data = ff.createServiceMessageStatusReq(frame.followNumber, frame.pagerId, frame.permannentConnection);
             ch.sendMessage(frame.pagerId, data, 5000);
+
+            sendActiveToProxyAgent(frame.pagerId, true);
 
             log(frame.pagerId, "Response information that there is no control room or that the requested function is not implemented the control room", data, false);
             break;
@@ -766,4 +781,85 @@ function setActiveSense(sense, value) {
     })
 
     return deferred.promise;
+}
+
+function gpsToLatLong(gps) {
+
+    var parts = gps.split(",");
+    var latdeg = parts[0].toString().slice(0,2);
+    var latmin = parts[0].toString().slice(2)/60;
+    var lat = parseFloat(latdeg) + parseFloat(latmin);
+
+    if(parts[1]=="S")
+        lat = lat * -1;
+
+    var longdeg = parts[2].toString().slice(0,3);
+    var longmin = parts[2].toString().slice(3)/60;
+    var long = parseFloat(longdeg) + parseFloat(longmin);
+
+    if(parts[3]=="W")
+        long = long * -1;
+
+    var latlong = {};
+    latlong.latitude = lat;
+    latlong.longitude = long;
+
+    return latlong;
+}
+
+function sendAlarmToProxyAgent(pagerId, gps, type) {
+    var latlong = gpsToLatLong(gps);
+
+    var params = {};
+    params.pagerId = pagerId;
+    params.type = type;
+    params.latitude = latlong.latitude;
+    params.longitude = latlong.longitude;
+
+    var request = {};
+    request.method = "pagerAlarm";
+    request.params = params;
+
+    sendToAgent(request, function(res) {
+       console.log("Send alarm with res: "+res);
+    });
+}
+
+function sendActiveToProxyAgent(pagerId, active) {
+
+    var params = {};
+    params.pagerId = pagerId;
+    params.active = active;
+
+    var request = {};
+    request.method = "onActivate";
+    request.params = params;
+
+    sendToAgent(request, function(res) {
+        console.log("Send activity with res: "+res);
+    });
+}
+
+function sendToAgent(request, callback) {
+    var agentUrl = config.alarmAgentUrl
+    var parsedUrl = url.parse(url);
+
+    var options = {
+        host: parsedUrl.host,
+        path: parsedUrl.path,
+        method: 'POST'
+    }
+
+    var req = http.request(options, function(res) {
+        res.on("data", function(chunk) {
+            callback(null, chunk);
+        });
+    }).on('error', function(e) {
+            console.log("Error: " + e.message);
+            callback(e.message, null);
+        });
+
+    // write data to request body
+    req.write(request);
+    req.end();
 }

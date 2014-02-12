@@ -162,6 +162,11 @@ Frame.prototype.decodeS = function() {
     this.parameter = parseInt(this.frame.substr(this.startParameter, LENGTH_PARAMETER));
 
     switch(this.parameter ) {
+        case SRV_SOS:
+            var startRest = this.startParameter + LENGTH_PARAMETER;
+            this.rest = this.frame.substr(startRest, this.frame.length - startRest);
+            break;
+
         case SRV_SIMCARD_NUMBER:
             var startRest = this.startParameter + LENGTH_PARAMETER;
             this.rest = this.frame.substr(startRest, this.frame.length - startRest);
