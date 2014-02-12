@@ -809,13 +809,16 @@ function gpsToLatLong(gps) {
 }
 
 function sendAlarmToProxyAgent(pagerId, gps, type) {
-    var latlong = gpsToLatLong(gps);
 
     var params = {};
     params.pagerId = pagerId;
     params.type = type;
-    params.latitude = latlong.latitude;
-    params.longitude = latlong.longitude;
+
+    if(gps!=null) {
+        var latlong = gpsToLatLong(gps);
+        params.latitude = latlong.latitude;
+        params.longitude = latlong.longitude;
+    }
 
     var request = {};
     request.method = "pagerAlarm";
