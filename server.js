@@ -8,7 +8,8 @@ var net = require('net'),
     log = require("./lib/logger.js"),
 	AskSoapClient = require('./lib/asksoapclient.js'), // Keep this 'old ASK' soapclient for escalations only
     AskRESTClient = require('./lib/askrestclient.js'),
-    Q = require('q');
+    Q = require('q'),
+    url = require('url');
 
 var ch = new ClientHandler(config.delayInactivity, config);
 
@@ -842,7 +843,7 @@ function sendActiveToProxyAgent(pagerId, active) {
 
 function sendToAgent(request, callback) {
     var agentUrl = config.alarmAgentUrl
-    var parsedUrl = url.parse(url);
+    var parsedUrl = url.parse(agentUrl);
 
     var options = {
         host: parsedUrl.host,
