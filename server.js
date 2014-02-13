@@ -326,6 +326,7 @@ function decodeData(data, sizeFrameLength, socket) {
     if(bf.gps!=null) {
         var client = ch.clients[bf.pagerId];
         if(client!=null && client.uuid!=null) {
+
             var promise = setGPS(client.uuid, bf.gps);
             var promise2 = setGPSSense(client.sense, bf.gps);
             promise.then();
@@ -755,15 +756,21 @@ function setGPSSense(sense, gps) {
 
     var deferred = Q.defer();
 
-    sense.addGPSData(lat, long, accuracy, function(err, res){
-        if(err) {
-            console.log("Failed setting gps data: ",err);
-            deferred.reject(err);
-        } else {
-            console.log("Added gps data", res);
-            deferred.resolve();
-        }
-    })
+    if(sense==null) {
+        setTimeout(function(){
+            deferred.reject("Sense is null");
+        }, 1);
+    } else {
+        sense.addGPSData(lat, long, accuracy, function(err, res){
+            if(err) {
+                console.log("Failed setting gps data: ",err);
+                deferred.reject(err);
+            } else {
+                console.log("Added gps data", res);
+                deferred.resolve();
+            }
+        });
+    }
 
     return deferred.promise;
 }
@@ -771,15 +778,22 @@ function setGPSSense(sense, gps) {
 function setActiveSense(sense, value) {
     var deferred = Q.defer();
 
-    sense.addActiveData(value, function(err, res){
-        if(err) {
-            console.log("Failed setting active data: ",err);
-            deferred.reject(err);
-        } else {
-            console.log("Added active data", res);
-            deferred.resolve();
-        }
-    })
+    if(sense==null) {
+        setTimeout(function(){
+            deferred.reject("Sense is null");
+        }, 1);
+    } else {
+
+        sense.addActiveData(value, function(err, res){
+            if(err) {
+                console.log("Failed setting active data: ",err);
+                deferred.reject(err);
+            } else {
+                console.log("Added active data", res);
+                deferred.resolve();
+            }
+        })
+    }
 
     return deferred.promise;
 }
