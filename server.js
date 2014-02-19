@@ -22,34 +22,7 @@ var wsdl = config.wsdl,
 
 /* PagerId to user mapping */
 // Note: Also add a Sense account for each pagerId in clienthandler.js
-var users = {
-  "1": {
-    "username": "ducodemo",
-    "passHash": "95346415f1f5933a78386d1759d2ef22",
-	"baseUrl": "http://askpack.ask-cs.com/standby-fair/"
-  },
-  "2": {
-    "username": "jordibevel",
-    "passHash": "43514a20c7801ebd4b1e6769939dd95f",
-	"baseUrl": "http://askpack.ask-cs.com/standby-fair/"
-  },
-  /*
-  "778224": {
-	"username": "ducodemo",
-    "passHash": "95346415f1f5933a78386d1759d2ef22",
-	"baseUrl": "http://askpack.ask-cs.com/standby-fair/"
-  }
-  */
-  "778224": {
-	"username": "bhv-user",
-    "passHash": "cffbecbf42fe16225619a45151f2e0eb",
-	"baseUrl": "http://dev.ask-cs.com/bhv-demo/"
-  }
-};
 
-var uuid = users['1']['username'];
-	var passHash = users['1']['passHash'];
-	var baseUrl = users['1']['baseUrl'];
 
 var STX = 2,
     POLL = 5,
@@ -325,24 +298,14 @@ function decodeData(data, sizeFrameLength, socket) {
 
     if(bf.gps!=null) {
         var client = ch.clients[bf.pagerId];
-        if(client!=null && client.uuid!=null) {
+        if(client!=null && client.user!=null) {
 
-            var promise = setGPS(client.uuid, bf.gps);
+            var promise = setGPS(client.user, bf.gps);
             var promise2 = setGPSSense(client.sense, bf.gps);
             promise.then();
             promise2.then();
         }
     }
-	
-	// Select specific user credentials based on the pagerid
-	if(typeof bf.pagerId != 'undefined' && bf.pagerId != null){
-		console.log("PagerID: " + bf.pagerId);
-		
-		// Read the login details for this pagerId
-		uuid = 		users[ bf.pagerId ]['username'];
-		passHash = 	users[ bf.pagerId ]['passHash'];
-		
-	}
 }
 
 // R Frame
@@ -459,7 +422,7 @@ function handleAvailability(frame) {
     if(length!=0) {
         var client = ch.clients[frame.pagerId];
 
-        var promise1 = setAvailability(client.uuid, state, length);
+        var promise1 = setAvailability(client.user, state, length);
         var promise2 = sendAvailability(frame.followNumber, frame.pagerId, 0, pager_state);
         promise1.then(function(result){
             promise2.then(function(){
@@ -506,7 +469,7 @@ function handleService(frame) {
 
         case SRV_REQ_SINGLE_CENTER:
             var client = ch.clients[frame.pagerId];
-            var promise = getAvailability(client.uuid);
+            var promise = getAvailability(client.user);
             promise.then(function(result) {
 
                 //var data = ff.createAvailability()
@@ -617,7 +580,7 @@ function handleStartUp(frame, socket) {
 }
 
 // REST-IFIED
-function setAvailability (nodeUUID, state, length) {
+function setAvailability (user, state, length) {
 
 	console.log('setAvailability');
 	
@@ -627,35 +590,47 @@ function setAvailability (nodeUUID, state, length) {
 
     var deferred = Q.defer();
 
-	console.log('Start process: Login user ' + uuid + ' with password hash ' + passHash + ' via URL: ' + baseUrl);
-    var client = new AskRESTClient(baseUrl, uuid, passHash);
-	client.createSlot(start, end, state, function(err, result) {
-        if(err) {
-            console.log('CreateSlot ERROR: '+err);
-            return deferred.reject(err);
-        }
-        console.log("createSlot: "+result);
-        deferred.resolve(result);
-    });
+    if(user==null) {
+        console.log("Not setting availability: "+user);
+        setTimeout(function(){
+            deferred.reject("No uuid");
+        }, 1);
+    } else {
+        console.log('Start process: Login user ' + user.username + ' with password hash ' + user.passHash + ' via URL: ' + user.baseUrl);
+        var client = new AskRESTClient(user.baseUrl, user.username, user.passHash);
+        client.createSlot(start, end, state, function(err, result) {
+            if(err) {
+                console.log('CreateSlot ERROR: '+err);
+                return deferred.reject(err);
+            }
+            console.log("createSlot: "+result);
+            deferred.resolve(result);
+        });
+    }
 	
     return deferred.promise;
 }
 
 // REST-IFIED
-function getAvailability(nodeUUID) {
+function getAvailability(user) {
     var start = Math.round(new Date().getTime() / 1000);
     var end = start + 1;
 
     var deferred = Q.defer();
 
-    var client = new AskRESTClient(baseUrl, uuid, passHash);
-    client.getSlots(nodeUUID, start, end, true, function(err, result) {
-        if(err) {
-            return deferred.reject(err);
-        }
-        deferred.resolve(result);
-    });
-
+    if(user==null) {
+        setTimeout(function(){
+            deferred.reject("No uuid");
+        }, 1);
+    } else {
+        var client = new AskRESTClient(user.baseUrl, user.username, user.passHash);
+        client.getSlots(user.username, start, end, true, function(err, result) {
+            if(err) {
+                return deferred.reject(err);
+            }
+            deferred.resolve(result);
+        });
+    }
     return deferred.promise;
 }
 
@@ -697,7 +672,7 @@ function setEscalation() {
     return deferred.promise;
 }
 
-function setGPS(nodeUUID, gps) {
+function setGPS(user, gps) {
 
     var parts = gps.split(",");
     var latdeg = parts[0].toString().slice(0,2);
@@ -718,16 +693,21 @@ function setGPS(nodeUUID, gps) {
 
     var deferred = Q.defer();
 
-	//*
-    var client = new AskRESTClient(baseUrl, uuid, passHash);
-    client.createResource(nodeUUID, "latlong", lat+","+long, function(err, result) {
-        if(err) {
-            console.log(' ERROR: '+err);
-            return deferred.reject(err);
-        }
-        console.log("createResource: "+result);
-        deferred.resolve(result);
-    });
+    if(user==null) {
+        setTimeout(function(){
+            deferred.reject("No uuid");
+        }, 1);
+    } else {
+        var client = new AskRESTClient(user.baseUrl, user.username, user.passHash);
+        client.createResource(user.username, "latlong", lat+","+long, function(err, result) {
+            if(err) {
+                console.log(' ERROR: '+err);
+                return deferred.reject(err);
+            }
+            console.log("createResource: "+result);
+            deferred.resolve(result);
+        });
+    }
 	//*/
 
     return deferred.promise;
