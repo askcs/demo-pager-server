@@ -8,11 +8,12 @@ var net = require('net'),
     log = require("./lib/logger.js"),
 	AskSoapClient = require('./lib/asksoapclient.js'), // Keep this 'old ASK' soapclient for escalations only
     AskRESTClient = require('./lib/askrestclient.js'),
+    DataLogger = require('./lib/datalogger.js'),
     Q = require('q'),
     url = require('url');
 
 var ch = new ClientHandler(config.delayInactivity, config);
-
+var logger = new DataLogger();
 
 var port = config.port;
 var httpPort = config.httpport;
@@ -122,6 +123,11 @@ app.get('/message/:id', function(req, res){
         }
     }
 });
+app.get("/usage", function(req,res){
+    logger.getAllUsage(function(err, resp){
+        res.send(resp);
+    });
+});
 app.get("/clients", function(req, res) {
     var clientIDs = [];
     for(var x in ch.clients) {
@@ -229,6 +235,7 @@ function receiveData(data, socket) {
 }
 
 function decodeData(data, sizeFrameLength, socket) {
+
     // Check if the frame is normal polling frame
     if(data.length==1 && data[0] == POLL) {
         console.log("Polling frame");
@@ -237,6 +244,9 @@ function decodeData(data, sizeFrameLength, socket) {
         var client = ch.sockets[socket.name];
         var promise = setActiveSense(client.sense, 2);
         promise.then();
+
+        // Log the usage
+        logger.logData(client.id, data.length);
         return;
     }
 
@@ -249,6 +259,8 @@ function decodeData(data, sizeFrameLength, socket) {
         var client = ch.sockets[socket.name];
         var promise = setActiveSense(client.sense, 1);
         promise.then();
+
+        logger.logData(client.id, data.length);
         return;
     }
 
@@ -306,6 +318,12 @@ function decodeData(data, sizeFrameLength, socket) {
             promise2.then();
         }
     }
+
+    // Log the usage
+    console.log("Logging data:",data);
+    console.log("Of size: ",data.length);
+    var client = ch.clients[bf.pagerId];
+    logger.logData(client.id, data.length);
 }
 
 // R Frame
