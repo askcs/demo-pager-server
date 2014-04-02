@@ -323,7 +323,9 @@ function decodeData(data, sizeFrameLength, socket) {
     console.log("Logging data:",data);
     console.log("Of size: ",data.length);
     var client = ch.clients[bf.pagerId];
-    logger.logData(client.id, data.length);
+    if(client!=null) {
+        logger.logData(client.id, data.length);
+    }
 }
 
 // R Frame
