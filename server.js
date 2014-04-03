@@ -835,7 +835,7 @@ function sendAlarmToProxyAgent(pagerId, gps, type) {
     }
 
     var request = {};
-    request.method = "pagerAlarm";
+    request.method = "onAlarm";
     request.params = params;
 
     sendToAgent(request, function(res) {
