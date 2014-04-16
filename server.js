@@ -343,7 +343,7 @@ function handleAcknowledgeAlert(frame) {
 
     log(frame.pagerId, "Acknowledgement (automatic)", frame.frame, true);
 
-    if(frame.parameter != ACK_REPEAT) {
+    if (frame.parameter != ACK_REPEAT) {
         var data = ff.createAcknowledge(frame.followNumber, frame.permannentConnection);
         ch.sendMessage(frame.pagerId, data, 0);
 
@@ -352,20 +352,17 @@ function handleAcknowledgeAlert(frame) {
 
     // TODO: implement other types of acknowledgements
     // TODO: send gps location to backend
-    var confirm = false;
 
-    switch(frame.parameter) {
+    switch (frame.parameter) {
         case ACK_ACCEPT:
-            confirm = true;
+            sendConfirmAlarmToProxyAgent(frame.pagerId, true);
             break;
 
         case ACK_REFUSE:
-            confirm = false;
+            sendConfirmAlarmToProxyAgent(frame.pagerId, false);
             //setEscalation(); // Comment out for now
             break;
     }
-
-    sendConfirmAlarmToProxyAgent(frame.pagerId, confirm);
 }
 
 function handleAcknowledgePOCSAC(frame) {
