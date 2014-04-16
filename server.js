@@ -352,17 +352,20 @@ function handleAcknowledgeAlert(frame) {
 
     // TODO: implement other types of acknowledgements
     // TODO: send gps location to backend
+    var confirm = false;
 
     switch(frame.parameter) {
         case ACK_ACCEPT:
-            // Return something?
+            confirm = true;
             break;
 
         case ACK_REFUSE:
-            // TODO: Notify Emergency Room!
-            setEscalation();
+            confirm = false;
+            //setEscalation(); // Comment out for now
             break;
     }
+
+    sendConfirmAlarmToProxyAgent(frame.pagerId, confirm);
 }
 
 function handleAcknowledgePOCSAC(frame) {
@@ -855,6 +858,20 @@ function sendActiveToProxyAgent(pagerId, active) {
 
     sendToAgent(request, function(res) {
         console.log("Send activity with res: "+res);
+    });
+}
+
+function sendConfirmAlarmToProxyAgent(pagerId, confirm) {
+    var params = {};
+    params.pagerId = pagerId;
+    params.confirm = confirm;
+
+    var request = {};
+    request.method = "onAlarmResponse";
+    request.params = params;
+
+    sendToAgent(request, function(res) {
+        console.log("Send alarm response with res: "+res);
     });
 }
 
